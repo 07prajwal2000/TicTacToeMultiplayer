@@ -1,3 +1,14 @@
 .cursor-pointer {
     cursor: pointer;
 }
+
+.game-cell {
+    height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-board {
+    max-width: 450px;
+}

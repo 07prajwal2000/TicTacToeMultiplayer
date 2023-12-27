@@ -34,6 +34,7 @@ class GameState extends Schema {
 
 export default class GameRoom extends Room<GameState> {
 	private password: string = "";
+	private timeoutId: NodeJS.Timeout | undefined = undefined;
 
 	onCreate(options: any): void | Promise<any> {
 		this.setState(new GameState());
@@ -51,39 +52,26 @@ export default class GameRoom extends Room<GameState> {
 		options: any,
 		request?: IncomingMessage | undefined
 	) {
-		if (
-			(this.password && options.password) ||
-			options.password != this.password ||
-			!options.username
-		) {
+		if ((this.password && options.password && options.password != this.password) || !options.username) {
 			return false;
 		}
 		return true;
 	}
 
-	async onJoin(
-		client: Client<
-			this["clients"] extends ClientArray<infer U, any> ? U : never,
-			this["clients"] extends ClientArray<infer _, infer U> ? U : never
-		>,
-		options?: any,
-		auth?:
-			| (this["clients"] extends ClientArray<infer _, infer U>
-					? U
-					: never)
-			| undefined
-	): Promise<void | Promise<any>> {
+	async onJoin(client: Client,options?: any, auth?: any): Promise<void | Promise<any>> {
 		const key = !this.state.player1.active ? "player1" : "player2";
 		if (!this.state[key].active) {
 			this.state[key].active = true;
 			this.state[key].name = options.username;
 			this.state[key].color = key == "player1" ? "red" : "blue";
+			this.state[key].id = client.sessionId;
 		}
 		if (key == "player2") {
 			this.state.gameStarted = true;
 			this.state.currentPlayer = 1;
       await this.lock();
 		}
+		console.log("Player joined: ", this.state[key]);
 	}
 
   onLeave(client: Client<this["clients"] extends ClientArray<infer U, any> ? U : never, this["clients"] extends ClientArray<infer _, infer U> ? U : never>, consented?: boolean | undefined): void | Promise<any> {
@@ -137,8 +125,9 @@ export default class GameRoom extends Room<GameState> {
 		}
 		if (count == 3) return true;
 		count = 0;
-		for (let i = 2; i >= 0; i--) {
-			const key1 = `${i}-${i}`;
+		for (let i = 0; i <= 2; i++) {
+			let j = 2 - i;
+			const key1 = `${j}-${i}`;
 			if (!this.checkBoxOwner(key1)) {
 				continue;
 			}
@@ -153,10 +142,13 @@ export default class GameRoom extends Room<GameState> {
     return box && box.whichPlayer == this.state.currentPlayer;
   }
 
+	onDispose(): void | Promise<any> {
+		clearInterval(this.timeoutId);
+	}
+	
   private autoCloseRoomAfterTimeout() {
-    setTimeout(() => {
+    this.timeoutId = setInterval(() => {
       if (this.clients.length == 0) this.disconnect();
-    }, 1000 * 30);
+    }, 1000 * 60);
   }
-
 }

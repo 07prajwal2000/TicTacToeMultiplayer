@@ -9,14 +9,14 @@ const port = parseInt(process.env.PORT || '0') || 3000;
 const app = express();
 
 const httpServer = createServer(app);
-app.use((req, resp, next) => {
+app.use(express.json());
+app.use((_, resp, next) => {
   resp.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-  resp.setHeader('Access-Control-Allow-Header', '*');
-  resp.setHeader('Access-Control-Allow-Method', '*');
+  resp.setHeader('Access-Control-Allow-Headers', '*');
+  resp.setHeader('Access-Control-Allow-Methods', '*');
   resp.setHeader('Access-Control-Allow-Credentials', 'true');
   next();
 });
-app.use(express.json());
 
 const server = new Server({
   server: httpServer
