@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, useGlobalStore } from "../store/global";
 import { createRoom } from "../api/roomApi";
+import toast from "react-hot-toast";
 
 const HomePage = () => {
 	const { setRoute, roomDetails } = useGlobalStore();
@@ -29,7 +30,7 @@ const HomePage = () => {
       const data = await createRoom(roomName, password);
       roomDetails.setValue(data.id, password, username);
     } catch (e) {
-      alert("Failed to create room.");
+      toast.error("Failed to create room.");
       console.log(e);
     }
 		setRoute(Routes.Game);

@@ -39,26 +39,27 @@ export default class GameRoom extends Room<GameState> {
 	onCreate(options: any): void | Promise<any> {
 		this.setState(new GameState());
 		this.password = options?.password || "";
-
-		this.onMessage("boardClick", this.onBoardClick);
-    this.autoCloseRoomAfterTimeout();
+		console.log("Options: ", options);
+		this.onMessage("boardClick", (c, m) => this.onBoardClick(c, m));
+		this.autoCloseRoomAfterTimeout();
 	}
 
 	onAuth(
-		client: Client<
-			this["clients"] extends ClientArray<infer U, any> ? U : never,
-			this["clients"] extends ClientArray<infer _, infer U> ? U : never
-		>,
+		client: Client,
 		options: any,
 		request?: IncomingMessage | undefined
 	) {
-		if ((this.password && options.password && options.password != this.password) || !options.username) {
-			return false;
+		if (!this.password || this.password == options.password) {
+			return true;
 		}
-		return true;
+		return false;
 	}
 
-	async onJoin(client: Client,options?: any, auth?: any): Promise<void | Promise<any>> {
+	async onJoin(
+		client: Client,
+		options?: any,
+		auth?: any
+	): Promise<void | Promise<any>> {
 		const key = !this.state.player1.active ? "player1" : "player2";
 		if (!this.state[key].active) {
 			this.state[key].active = true;
@@ -69,26 +70,37 @@ export default class GameRoom extends Room<GameState> {
 		if (key == "player2") {
 			this.state.gameStarted = true;
 			this.state.currentPlayer = 1;
-      await this.lock();
+			await this.lock();
 		}
 		console.log("Player joined: ", this.state[key]);
 	}
 
-  onLeave(client: Client<this["clients"] extends ClientArray<infer U, any> ? U : never, this["clients"] extends ClientArray<infer _, infer U> ? U : never>, consented?: boolean | undefined): void | Promise<any> {
-    if (this.clients.length == 0) this.disconnect();
-  }
+	onLeave(
+		client: Client,
+		consented?: boolean | undefined
+	): void | Promise<any> {
+		if (this.clients.length == 0) this.disconnect();
+		if (this.clients.length == 1 && this.state.winPlayer == -1) {
+			this.broadcast("player-exited");
+		}
+	}
 
-	private onBoardClick(client: Client, message: any) {
+	private onBoardClick(client: Client<GameState>, message: any) {
+		if (this.state.winPlayer != -1) return;
 		if (!boardClickTypeSchema.safeParse(message)) return;
 		const { x, y }: { x: number; y: number } = message;
+		console.log(this.state);
 		const currentPlayer = this.state.currentPlayer;
 		this.updateBoard(x, y, currentPlayer);
 		const gameWon = this.checkWinner(x, y);
-    if (gameWon) {
-      this.state.winPlayer = this.state.currentPlayer;
-      this.disconnect();
-      return;
-    }
+		if (gameWon) {
+			this.state.winPlayer = this.state.currentPlayer;
+			this.broadcast("game-won");
+			setTimeout(() => {
+				this.disconnect();
+			}, 10 * 1000);
+			return;
+		}
 		this.state.currentPlayer = currentPlayer == 1 ? 2 : 1;
 	}
 
@@ -137,18 +149,18 @@ export default class GameRoom extends Room<GameState> {
 		return false;
 	}
 
-  private checkBoxOwner(key:string) {
-    const box = this.state.board.get(key);
-    return box && box.whichPlayer == this.state.currentPlayer;
-  }
+	private checkBoxOwner(key: string) {
+		const box = this.state.board.get(key);
+		return box && box.whichPlayer == this.state.currentPlayer;
+	}
 
 	onDispose(): void | Promise<any> {
 		clearInterval(this.timeoutId);
 	}
-	
-  private autoCloseRoomAfterTimeout() {
-    this.timeoutId = setInterval(() => {
-      if (this.clients.length == 0) this.disconnect();
-    }, 1000 * 60);
-  }
+
+	private autoCloseRoomAfterTimeout() {
+		this.timeoutId = setInterval(() => {
+			if (this.clients.length == 0) this.disconnect();
+		}, 1000 * 60);
+	}
 }

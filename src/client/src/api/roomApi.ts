@@ -1,4 +1,4 @@
-const domain = "http://localhost:3000";
+const domain = import.meta.env.VITE_BASEURL;
 
 export type CreateRoomResponse = {
   id: string;
