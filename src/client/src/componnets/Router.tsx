@@ -1,7 +1,6 @@
 import { Routes, useGlobalStore } from "../store/global"
 import GamePage from "../pages/game";
 import HomePage from "../pages/home";
-import JoinOrCreatePage from "../pages/joinOrCreate";
 
 const Router = () => {
   const { currentRoute } = useGlobalStore();
@@ -10,8 +9,6 @@ const Router = () => {
       return <GamePage />;
     case Routes.Home:
       return <HomePage />
-    case Routes.JoinOrCreate:
-      return <JoinOrCreatePage />
   }
 }
 

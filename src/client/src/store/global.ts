@@ -16,7 +16,7 @@ type StoreType = {
 	};
 };
 
-const store = create<StoreType>((set, get) => ({
+const store = create<StoreType>((set) => ({
 	currentRoute: Routes.Home,
 	setRoute(r) {
 		set((s) => ({ ...s, currentRoute: r }));
